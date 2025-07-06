@@ -1,1 +1,1 @@
-#[SoccerCamp](daisunas.github.io/SoccerCamp)
+[SoccerCamp](daisunas.github.io/SoccerCamp)
