@@ -2,74 +2,278 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Tracker</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 2rem; }
-    input[type="text"] { padding: 0.5rem; font-size: 1rem; width: 200px; }
-    button { padding: 0.5rem 1rem; margin-left: 0.5rem; font-size: 1rem; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 0.5rem 0; }
+    :root {
+      --gap: 0.75rem;
+      --border: 1px solid #ccc;
+      --radius: 8px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      padding: var(--gap);
+      max-width: 840px;
+      margin: auto;
+      line-height: 1.4;
+    }
+    h1, h2, h3 {
+      margin: 0.5rem 0;
+    }
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--gap);
+      margin-bottom: var(--gap);
+    }
+    input[type="text"], input[type="tel"] {
+      flex: 1 1 160px;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: var(--border);
+      border-radius: var(--radius);
+    }
+    button {
+      flex: 0 0 auto;
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: var(--radius);
+      background: #1976d2;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .kid {
+      margin: var(--gap) 0;
+      padding: var(--gap);
+      border: var(--border);
+      border-radius: var(--radius);
+    }
+    .checked-in {
+      background-color: #e6ffe6;
+    }
+    .coach-section {
+      margin-top: 1.5rem;
+    }
+    .coach-section h3 {
+      margin-bottom: 0.25rem;
+      background: #f5f5f5;
+      padding: 0.5rem;
+      border-radius: var(--radius);
+    }
+    ul {
+      margin: 0;
+      padding-left: 1rem;
+    }
+    li {
+      margin: 0.25rem 0;
+    }
+
+    @media (max-width: 480px) {
+      button, input[type="text"], input[type="tel"] {
+        flex: 1 1 100%;
+      }
+    }
   </style>
 </head>
 <body>
   <h1>Attendance Tracker</h1>
-  <input id="orderInput" type="text" placeholder="Enter Order ID" />
-  <button onclick="searchOrder()">Search</button>
-  <div id="results"></div>
+
+  <div class="input-group">
+    <input type="file" id="jsonUpload" accept=".json" />
+  </div>
+
+  <div class="input-group">
+    <input id="orderInput" type="tel" inputmode="numeric" placeholder="Enter ID" />
+    <button onclick="searchKid()">Search</button>
+    <button onclick="clearSearch()">Clear</button>
+  </div>
+
+  <div id="kidInfo"></div>
+
+  <h2>Checked‑In Kids</h2>
+  <div id="checkedInList"></div>
+  <p id="totalCount" style="margin-top:1rem;font-weight:bold;"></p>
+  <button onclick="resetCheckIns()">Reset All</button>
 
   <script>
     let data = [];
-    let checkedIn = new Set();
+    let checkedIn = [];
 
-    // Load the JSON from file
-    fetch('leaders.json')
-      .then(res => res.json())
-      .then(json => data = json)
-      .catch(err => {
-        document.getElementById('results').innerHTML = '<p>Error loading data.</p>';
-        console.error(err);
-      });
+    function parseAndSetData(json) {
+      data = json.map((kid, idx) => ({ ...kid, uniqueKey: idx }));
 
-    function searchOrder() {
+      const saved = localStorage.getItem("checkedInKids");
+      if (saved) {
+        const savedKeys = new Set(JSON.parse(saved).map(String));
+        checkedIn = data.filter(kid => savedKeys.has(String(kid.uniqueKey)));
+      }
+      renderCheckedInList();
+    }
+
+    const storedData = localStorage.getItem("uploadedLeadersData");
+    if (storedData) {
+      try {
+        const parsed = JSON.parse(storedData);
+        parseAndSetData(parsed);
+      } catch (err) {
+        console.error("Failed to parse saved uploadedLeadersData:", err);
+        localStorage.removeItem("uploadedLeadersData");
+        loadDefaultData();
+      }
+    } else {
+      loadDefaultData();
+    }
+
+    function loadDefaultData() {
+      fetch('leaders.json')
+        .then(res => res.json())
+        .then(json => {
+          localStorage.setItem("uploadedLeadersData", JSON.stringify(json));
+          parseAndSetData(json);
+        })
+        .catch(err => {
+          document.getElementById('kidInfo').innerHTML = '<p>Error loading data.</p>';
+          console.error(err);
+        });
+    }
+
+    document.getElementById('jsonUpload').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const json = JSON.parse(e.target.result);
+          localStorage.setItem("uploadedLeadersData", JSON.stringify(json));
+          localStorage.removeItem("checkedInKids");
+          document.getElementById('kidInfo').innerHTML = '';
+          document.getElementById('orderInput').value = '';
+          parseAndSetData(json);
+          alert("Successfully loaded and saved leaders.json.");
+        } catch (err) {
+          alert("Invalid JSON file.");
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById("orderInput").addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        searchKid();
+      }
+    });
+
+    function searchKid() {
       const orderId = document.getElementById('orderInput').value.trim();
-      const kids = data.filter(k => k["Order ID"] === orderId);
-      const container = document.getElementById('results');
-      checkedIn.clear();
+      const info = document.getElementById('kidInfo');
 
-      if (kids.length === 0) {
-        container.innerHTML = `<p>No kids found for Order ID <strong>${orderId}</strong></p>`;
+      if (!orderId) {
+        info.innerHTML = '<p>Please enter an Order ID.</p>';
         return;
       }
 
-      let html = `<h2>Kids in Order ${orderId}</h2><ul>`;
-      kids.forEach((kid, i) => {
-        html += `
-          <li>
-            <input type="checkbox" id="kid-${i}" onchange="toggleCheckIn(${i})">
-            ${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})
-          </li>`;
-      });
-      html += `</ul>`;
-      html += `<p><strong>Checked In:</strong> <span id="count">0</span> / ${kids.length}</p>`;
-      html += `<button onclick="resetCheckIns()">Reset Check-ins</button>`;
-      container.innerHTML = html;
-    }
+      const kids = data.filter(kid => String(kid["Order ID"]) === orderId);
 
-    function toggleCheckIn(i) {
-      const box = document.getElementById(`kid-${i}`);
-      if (box.checked) {
-        checkedIn.add(i);
-      } else {
-        checkedIn.delete(i);
+      if (kids.length === 0) {
+        info.innerHTML = `<p>No kids found for Order ID <strong>${orderId}</strong></p>`;
+        return;
       }
-      document.getElementById("count").textContent = checkedIn.size;
+
+      let html = '';
+      kids.forEach(kid => {
+        const alreadyCheckedIn = checkedIn.some(c => c.uniqueKey === kid.uniqueKey);
+        html += `
+          <div class="kid ${alreadyCheckedIn ? 'checked-in' : ''}">
+            <p><strong>${kid["First Name"]} ${kid["Last Name"]}</strong> (Age ${kid["Age"]})</p>
+            <p>Coach: ${kid["Coach"]}</p>
+            <p>Parent: ${kid["Parent"]}</p>
+            <p>Phone: ${kid["Primary Phone Number"]}</p>
+            <p>Schedule: ${kid["Schedule Time"]}</p>
+            ${
+              alreadyCheckedIn
+                ? '<p><em>Already checked in</em></p>'
+                : `<button onclick="checkInKid(${kid.uniqueKey})">Check In</button>`
+            }
+          </div>
+        `;
+      });
+
+      info.innerHTML = html;
     }
 
-    function resetCheckIns() {
-      checkedIn.clear();
-      document.querySelectorAll('input[type="checkbox"]').forEach(box => box.checked = false);
-      const count = document.getElementById("count");
-      if (count) count.textContent = 0;
+    function checkInKid(uniqueKey) {
+      const kid = data.find(k => k.uniqueKey === uniqueKey);
+      if (!kid) return;
+
+      if (!checkedIn.some(c => c.uniqueKey === uniqueKey)) {
+        checkedIn.push(kid);
+        localStorage.setItem("checkedInKids", JSON.stringify(checkedIn.map(k => String(k.uniqueKey))));
+      }
+
+      renderCheckedInList();
+      searchKid(); // Keep showing remaining kids with same ID
+    }
+
+    function renderCheckedInList() {
+      const container = document.getElementById('checkedInList');
+      const totalCount = document.getElementById('totalCount');
+
+      if (checkedIn.length === 0) {
+        container.innerHTML = '<p>No kids checked in yet.</p>';
+        totalCount.textContent = '';
+        return;
+      }
+
+      const grouped = {};
+      checkedIn.forEach(kid => {
+        if (!grouped[kid.Coach]) grouped[kid.Coach] = [];
+        grouped[kid.Coach].push(kid);
+      });
+
+      let html = '';
+      for (const coach in grouped) {
+        const kids = grouped[coach];
+        const totalForCoach = data.filter(k => k.Coach === coach).length;
+        html += `
+          <div class="coach-section">
+            <h3>Coach ${coach} – ${kids.length} / ${totalForCoach} checked in</h3>
+            <ul>
+              ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+      totalCount.textContent = `${checkedIn.length} / ${data.length} kids checked in`;
+    }
+
+	function resetCheckIns() {
+	  const confirmed = confirm("Are you sure you want to reset all check-ins?");
+	  if (!confirmed) return;
+
+	  checkedIn = [];
+	  localStorage.removeItem("checkedInKids");
+	  document.getElementById('kidInfo').innerHTML = '';
+	  document.getElementById('orderInput').value = '';
+	  renderCheckedInList();
+	}
+
+    function clearSearch() {
+      const input = document.getElementById('orderInput');
+      input.value = '';
+      document.getElementById('kidInfo').innerHTML = '';
+      input.focus();
     }
   </script>
 </body>
