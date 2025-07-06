@@ -129,10 +129,10 @@ function renderCheckedInList() {
     return;
   }
 
+  // Checked-in kids grouped by coach
   if (checkedIn.length === 0) {
     container.innerHTML = '<p>No kids checked in yet.</p>';
   } else {
-    // Group checked in kids by coach
     const checkedInGrouped = {};
     checkedIn.forEach(kid => {
       if (!checkedInGrouped[kid.Coach]) checkedInGrouped[kid.Coach] = [];
@@ -155,10 +155,11 @@ function renderCheckedInList() {
     container.innerHTML = html;
   }
 
-  // Now show not checked-in kids grouped by coach
+  // Not checked-in kids grouped by coach in a collapsible <details>
   const notCheckedIn = data.filter(kid => !checkedIn.some(c => c.uniqueKey === kid.uniqueKey));
+  let notCheckedHtml = '';
   if (notCheckedIn.length === 0) {
-    container.innerHTML += '<p>All kids are checked in.</p>';
+    notCheckedHtml = '<p>All kids are checked in.</p>';
   } else {
     const notCheckedGrouped = {};
     notCheckedIn.forEach(kid => {
@@ -166,11 +167,11 @@ function renderCheckedInList() {
       notCheckedGrouped[kid.Coach].push(kid);
     });
 
-    let html = '<h2>Not Checked-In Kids</h2>';
+    notCheckedHtml += '<details><summary style="cursor:pointer; font-weight:bold; margin-top:1rem;">Not Checked-In Kids</summary>';
     for (const coach in notCheckedGrouped) {
       const kids = notCheckedGrouped[coach];
-      html += `
-        <div class="coach-section">
+      notCheckedHtml += `
+        <div class="coach-section" style="margin-top: 0.5rem;">
           <h3>Coach ${coach} – ${kids.length} kids not checked in</h3>
           <ul>
             ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
@@ -178,12 +179,13 @@ function renderCheckedInList() {
         </div>
       `;
     }
-    container.innerHTML += html;
+    notCheckedHtml += '</details>';
   }
+
+  container.innerHTML += notCheckedHtml;
 
   totalCount.textContent = `${checkedIn.length} / ${data.length} kids checked in`;
 }
-
 
 function resetCheckIns() {
   const confirmed = confirm("Are you sure you want to reset all check-ins?");
