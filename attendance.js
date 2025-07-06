@@ -106,6 +106,32 @@ function searchKid() {
   info.innerHTML = html;
 }
 
+function showKidDetails(uniqueKey) {
+  const kid = data.find(k => k.uniqueKey === uniqueKey);
+  if (!kid) return;
+
+  const alreadyCheckedIn = checkedIn.some(c => c.uniqueKey === uniqueKey);
+  const info = document.getElementById('kidInfo');
+
+  info.innerHTML = `
+    <div class="kid ${alreadyCheckedIn ? 'checked-in' : ''}">
+      <p><strong>${kid["First Name"]} ${kid["Last Name"]}</strong> (Age ${kid["Age"]})</p>
+      <p>Coach: ${kid["Coach"]}</p>
+      <p>Parent: ${kid["Parent"]}</p>
+      <p>Phone: ${kid["Primary Phone Number"]}</p>
+      <p>Schedule: ${kid["Schedule Time"]}</p>
+      ${
+        alreadyCheckedIn
+          ? '<p><em>Already checked in</em></p>'
+          : `<button onclick="checkInKid(${kid.uniqueKey})">Check In</button>`
+      }
+    </div>
+  `;
+
+  info.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+
 function checkInKid(uniqueKey) {
   const kid = data.find(k => k.uniqueKey === uniqueKey);
   if (!kid) return;
@@ -116,7 +142,7 @@ function checkInKid(uniqueKey) {
   }
 
   renderCheckedInList();
-  searchKid(); // Keep showing remaining kids with same ID
+  searchKid(); // refreshes kid list if multiple match
 }
 
 function renderCheckedInList() {
@@ -147,7 +173,13 @@ function renderCheckedInList() {
         <div class="coach-section">
           <h3>Coach ${coach} – ${kids.length} / ${totalForCoach} checked in</h3>
           <ul>
-            ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
+            ${kids.map(kid => `
+              <li>
+                <a href="#" onclick="showKidDetails(${kid.uniqueKey})">
+                  ${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})
+                </a>
+              </li>
+            `).join('')}
           </ul>
         </div>
       `;
@@ -167,14 +199,25 @@ function renderCheckedInList() {
       notCheckedGrouped[kid.Coach].push(kid);
     });
 
-    notCheckedHtml += '<details><summary style="cursor:pointer; font-weight:bold; margin-top:1rem;">Not Checked-In Kids</summary>';
+    notCheckedHtml += `
+      <details>
+        <summary style="cursor:pointer; font-weight:bold; margin-top:1rem;">
+          Not Checked-In Kids
+        </summary>
+    `;
     for (const coach in notCheckedGrouped) {
       const kids = notCheckedGrouped[coach];
       notCheckedHtml += `
         <div class="coach-section" style="margin-top: 0.5rem;">
           <h3>Coach ${coach} – ${kids.length} kids not checked in</h3>
           <ul>
-            ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
+            ${kids.map(kid => `
+              <li>
+                <a href="#" onclick="showKidDetails(${kid.uniqueKey})">
+                  ${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})
+                </a>
+              </li>
+            `).join('')}
           </ul>
         </div>
       `;
@@ -183,7 +226,6 @@ function renderCheckedInList() {
   }
 
   container.innerHTML += notCheckedHtml;
-
   totalCount.textContent = `${checkedIn.length} / ${data.length} kids checked in`;
 }
 
