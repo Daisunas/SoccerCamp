@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attendance Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; }
+    input[type="text"] { padding: 0.5rem; font-size: 1rem; width: 200px; }
+    button { padding: 0.5rem 1rem; margin-left: 0.5rem; font-size: 1rem; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Attendance Tracker</h1>
+  <input id="orderInput" type="text" placeholder="Enter Order ID" />
+  <button onclick="searchOrder()">Search</button>
+  <div id="results"></div>
+
+  <script>
+    let data = [];
+    let checkedIn = new Set();
+
+    // Load the JSON from file
+    fetch('leaders.json')
+      .then(res => res.json())
+      .then(json => data = json)
+      .catch(err => {
+        document.getElementById('results').innerHTML = '<p>Error loading data.</p>';
+        console.error(err);
+      });
+
+    function searchOrder() {
+      const orderId = document.getElementById('orderInput').value.trim();
+      const kids = data.filter(k => k["Order ID"] === orderId);
+      const container = document.getElementById('results');
+      checkedIn.clear();
+
+      if (kids.length === 0) {
+        container.innerHTML = `<p>No kids found for Order ID <strong>${orderId}</strong></p>`;
+        return;
+      }
+
+      let html = `<h2>Kids in Order ${orderId}</h2><ul>`;
+      kids.forEach((kid, i) => {
+        html += `
+          <li>
+            <input type="checkbox" id="kid-${i}" onchange="toggleCheckIn(${i})">
+            ${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})
+          </li>`;
+      });
+      html += `</ul>`;
+      html += `<p><strong>Checked In:</strong> <span id="count">0</span> / ${kids.length}</p>`;
+      html += `<button onclick="resetCheckIns()">Reset Check-ins</button>`;
+      container.innerHTML = html;
+    }
+
+    function toggleCheckIn(i) {
+      const box = document.getElementById(`kid-${i}`);
+      if (box.checked) {
+        checkedIn.add(i);
+      } else {
+        checkedIn.delete(i);
+      }
+      document.getElementById("count").textContent = checkedIn.size;
+    }
+
+    function resetCheckIns() {
+      checkedIn.clear();
+      document.querySelectorAll('input[type="checkbox"]').forEach(box => box.checked = false);
+      const count = document.getElementById("count");
+      if (count) count.textContent = 0;
+    }
+  </script>
+</body>
+</html>
