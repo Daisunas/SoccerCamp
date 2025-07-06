@@ -123,34 +123,67 @@ function renderCheckedInList() {
   const container = document.getElementById('checkedInList');
   const totalCount = document.getElementById('totalCount');
 
-  if (checkedIn.length === 0) {
-    container.innerHTML = '<p>No kids checked in yet.</p>';
+  if (data.length === 0) {
+    container.innerHTML = '<p>No data loaded.</p>';
     totalCount.textContent = '';
     return;
   }
 
-  const grouped = {};
-  checkedIn.forEach(kid => {
-    if (!grouped[kid.Coach]) grouped[kid.Coach] = [];
-    grouped[kid.Coach].push(kid);
-  });
+  if (checkedIn.length === 0) {
+    container.innerHTML = '<p>No kids checked in yet.</p>';
+  } else {
+    // Group checked in kids by coach
+    const checkedInGrouped = {};
+    checkedIn.forEach(kid => {
+      if (!checkedInGrouped[kid.Coach]) checkedInGrouped[kid.Coach] = [];
+      checkedInGrouped[kid.Coach].push(kid);
+    });
 
-  let html = '';
-  for (const coach in grouped) {
-    const kids = grouped[coach];
-    const totalForCoach = data.filter(k => k.Coach === coach).length;
-    html += `
-      <div class="coach-section">
-        <h3>Coach ${coach} – ${kids.length} / ${totalForCoach} checked in</h3>
-        <ul>
-          ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
-        </ul>
-      </div>
-    `;
+    let html = '';
+    for (const coach in checkedInGrouped) {
+      const kids = checkedInGrouped[coach];
+      const totalForCoach = data.filter(k => k.Coach === coach).length;
+      html += `
+        <div class="coach-section">
+          <h3>Coach ${coach} – ${kids.length} / ${totalForCoach} checked in</h3>
+          <ul>
+            ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
   }
-  container.innerHTML = html;
+
+  // Now show not checked-in kids grouped by coach
+  const notCheckedIn = data.filter(kid => !checkedIn.some(c => c.uniqueKey === kid.uniqueKey));
+  if (notCheckedIn.length === 0) {
+    container.innerHTML += '<p>All kids are checked in.</p>';
+  } else {
+    const notCheckedGrouped = {};
+    notCheckedIn.forEach(kid => {
+      if (!notCheckedGrouped[kid.Coach]) notCheckedGrouped[kid.Coach] = [];
+      notCheckedGrouped[kid.Coach].push(kid);
+    });
+
+    let html = '<h2>Not Checked-In Kids</h2>';
+    for (const coach in notCheckedGrouped) {
+      const kids = notCheckedGrouped[coach];
+      html += `
+        <div class="coach-section">
+          <h3>Coach ${coach} – ${kids.length} kids not checked in</h3>
+          <ul>
+            ${kids.map(kid => `<li>${kid["First Name"]} ${kid["Last Name"]} (Age ${kid["Age"]})</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+    container.innerHTML += html;
+  }
+
   totalCount.textContent = `${checkedIn.length} / ${data.length} kids checked in`;
 }
+
 
 function resetCheckIns() {
   const confirmed = confirm("Are you sure you want to reset all check-ins?");
