@@ -28,9 +28,9 @@ if (storedData) {
   loadDefaultData();
 }
 
-// load default test data leaders.json
+// load default test data example.json
 function loadDefaultData() {
-  fetch('leaders.json')
+  fetch('example.json')
     .then(res => res.json())
     .then(json => {
       localStorage.setItem("uploadedLeadersData", JSON.stringify(json));
@@ -56,7 +56,7 @@ document.getElementById('jsonUpload').addEventListener('change', function(event)
       document.getElementById('kidInfo').innerHTML = '';
       document.getElementById('orderInput').value = '';
       parseAndSetData(json);
-      alert("Successfully loaded and saved leaders.json.");
+      alert("Successfully loaded and saved json file.");
     } catch (err) {
       alert("Invalid JSON file.");
       console.error(err);
