@@ -1,6 +1,7 @@
 let data = [];
 let checkedIn = [];
 
+// Parse uploaded data
 function parseAndSetData(json) {
   data = json.map((kid, idx) => ({ ...kid, uniqueKey: idx }));
 
@@ -12,6 +13,7 @@ function parseAndSetData(json) {
   renderCheckedInList();
 }
 
+//load stored data on page load
 const storedData = localStorage.getItem("uploadedLeadersData");
 if (storedData) {
   try {
@@ -26,6 +28,7 @@ if (storedData) {
   loadDefaultData();
 }
 
+// load default test data leaders.json
 function loadDefaultData() {
   fetch('leaders.json')
     .then(res => res.json())
@@ -39,6 +42,7 @@ function loadDefaultData() {
     });
 }
 
+// handles user json upload
 document.getElementById('jsonUpload').addEventListener('change', function(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -61,6 +65,7 @@ document.getElementById('jsonUpload').addEventListener('change', function(event)
   reader.readAsText(file);
 });
 
+// use enter key to trigger search
 document.getElementById("orderInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") {
     e.preventDefault();
@@ -68,6 +73,7 @@ document.getElementById("orderInput").addEventListener("keydown", function(e) {
   }
 });
 
+// search by Order ID
 function searchKid() {
   const orderId = document.getElementById('orderInput').value.trim();
   const info = document.getElementById('kidInfo');
@@ -106,6 +112,7 @@ function searchKid() {
   info.innerHTML = html;
 }
 
+// Display kid details when clicking name from any list
 function showKidDetails(uniqueKey) {
   const kid = data.find(k => k.uniqueKey === uniqueKey);
   if (!kid) return;
@@ -131,7 +138,7 @@ function showKidDetails(uniqueKey) {
   info.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-
+// Mark kid as checked in, updates UI/localStorage
 function checkInKid(uniqueKey) {
   const kid = data.find(k => k.uniqueKey === uniqueKey);
   if (!kid) return;
@@ -145,6 +152,7 @@ function checkInKid(uniqueKey) {
   searchKid(); // refreshes kid list if multiple match
 }
 
+// show all kids grouped by coach and checked in status, counts
 function renderCheckedInList() {
   const container = document.getElementById('checkedInList');
   const totalCount = document.getElementById('totalCount');
@@ -187,7 +195,7 @@ function renderCheckedInList() {
     container.innerHTML = html;
   }
 
-  // Not checked-in kids grouped by coach in a collapsible <details>
+  // not checked-in kids (collapsible)
   const notCheckedIn = data.filter(kid => !checkedIn.some(c => c.uniqueKey === kid.uniqueKey));
   let notCheckedHtml = '';
   if (notCheckedIn.length === 0) {
@@ -229,6 +237,7 @@ function renderCheckedInList() {
   totalCount.textContent = `${checkedIn.length} / ${data.length} kids checked in`;
 }
 
+// resets check-ins, clear stored data
 function resetCheckIns() {
   const confirmed = confirm("Are you sure you want to reset all check-ins?");
   if (!confirmed) return;
@@ -240,6 +249,7 @@ function resetCheckIns() {
   renderCheckedInList();
 }
 
+// clear search input, kid info display
 function clearSearch() {
   const input = document.getElementById('orderInput');
   input.value = '';
